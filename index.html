@@ -1,0 +1,427 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0b0c0e" />
+    <title>Piggy Bank — Money, in Flow</title>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <a class="brand" href="#" aria-label="Piggy Bank home">
+          <div class="brand-mark">🐷</div>
+          <div>
+            <div class="brand-name">Piggy Bank</div>
+            <div class="brand-caption">YOUR MONEY SPACE</div>
+          </div>
+        </a>
+
+        <div class="nav-label">WORKSPACE</div>
+        <nav class="nav">
+          <button class="nav-item active" data-page="Home">
+            <span>⌂</span> Home
+          </button>
+          <button class="nav-item" data-page="Transactions">
+            <span>⇄</span> Transactions
+          </button>
+          <button class="nav-item" data-page="Statistics">
+            <span>▥</span> Statistics
+          </button>
+          <button class="nav-item" data-page="Accounts">
+            <span>▣</span> Accounts
+          </button>
+          <button class="nav-item" data-page="Red Packets">
+            <span>◇</span> Red Packets
+          </button>
+          <button class="nav-item" data-page="Bank"><span>▣</span> Bank</button>
+        </nav>
+
+        <div class="nav-label second-label">YOUR MONEY</div>
+        <nav class="nav">
+          <button class="nav-item" data-page="Daily Report">
+            <span>◷</span> Daily Report
+          </button>
+          <button class="nav-item" data-page="Monthly Report">
+            <span>▤</span> Monthly Report
+          </button>
+        </nav>
+
+        <div class="sidebar-bottom">
+          <div class="mini-card">
+            <div class="mini-card-icon">✦</div>
+            <div class="mini-card-title">Small steps.</div>
+            <div class="mini-card-copy">Better money habits start here.</div>
+          </div>
+          <button class="nav-item" data-page="Settings">
+            <span>⚙</span> Settings
+          </button>
+          <div class="profile">
+            <div class="avatar">P</div>
+            <div class="profile-text">
+              <strong>My Wallet</strong>
+              <span>Personal account</span>
+            </div>
+            <span class="profile-dots">•••</span>
+          </div>
+        </div>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <div class="mobile-brand"><span>🐷</span> Piggy Bank</div>
+          <div class="breadcrumb">
+            My workspace <span>/</span> <strong id="page-title">Home</strong>
+          </div>
+          <div class="topbar-right">
+            <span class="demo-pill"><span></span> LOCAL MODE</span>
+            <button
+              class="icon-button"
+              id="date-button"
+              title="Today's date"
+              aria-label="Today's date"
+            >
+              ▦
+            </button>
+            <div class="top-avatar">P</div>
+          </div>
+        </header>
+
+        <section class="page">
+          <div class="welcome-row">
+            <div>
+              <div class="eyebrow">
+                <span class="sparkle">✦</span> YOUR FINANCIAL OVERVIEW
+              </div>
+              <h1 id="welcome-title">Your money, <span>in flow.</span></h1>
+              <p class="subtitle" id="welcome-subtitle">
+                A clearer picture of your money starts here.
+              </p>
+            </div>
+            <button class="primary-button" id="add-transaction">
+              <span>＋</span> Add transaction
+            </button>
+          </div>
+
+          <section class="balance-grid">
+            <article class="balance-card main-balance">
+              <div class="card-glow"></div>
+              <div class="balance-top">
+                <div class="balance-label">
+                  <span class="balance-icon">◈</span> EVERYDAY BALANCE
+                </div>
+                <span class="live-dot">● LIVE PREVIEW</span>
+              </div>
+              <div class="balance-amount" id="everyday-balance">
+                RM 1,280<span>.50</span>
+              </div>
+              <div class="balance-note">
+                <span class="trend-up">↗</span> Your day-to-day money
+              </div>
+              <div class="balance-divider"></div>
+              <div class="account-mini-grid">
+                <div>
+                  <span class="account-dot school"></span
+                  ><span>School Card</span
+                  ><strong id="school-balance">RM 680.00</strong>
+                </div>
+                <div>
+                  <span class="account-dot tng"></span><span>TNG</span
+                  ><strong id="tng-balance">RM 400.50</strong>
+                </div>
+                <div>
+                  <span class="account-dot cash"></span><span>Cash</span
+                  ><strong id="cash-balance">RM 200.00</strong>
+                </div>
+              </div>
+              <div class="card-orbit orbit-one"></div>
+              <div class="card-orbit orbit-two"></div>
+            </article>
+
+            <article class="balance-card overall-card">
+              <div class="overall-heading">
+                <div class="balance-label">
+                  <span class="balance-icon gold-icon">✧</span> OVERALL BALANCE
+                </div>
+                <div class="overall-symbol">↗</div>
+              </div>
+              <div class="overall-amount" id="overall-balance">
+                RM 1,580<span>.50</span>
+              </div>
+              <p class="overall-desc">All tracked money, in one place.</p>
+              <div class="overall-chart">
+                <svg
+                  viewBox="0 0 360 85"
+                  preserveAspectRatio="none"
+                  role="img"
+                  aria-label="Decorative gold balance trend"
+                >
+                  <defs>
+                    <linearGradient id="chart-fill" x1="0" x2="0" y1="0" y2="1">
+                      <stop
+                        offset="0%"
+                        stop-color="#d6b46a"
+                        stop-opacity=".25"
+                      />
+                      <stop
+                        offset="100%"
+                        stop-color="#d6b46a"
+                        stop-opacity="0"
+                      />
+                    </linearGradient>
+                  </defs>
+                  <path
+                    d="M0,66 C22,62 25,46 48,53 S83,69 103,44 S140,50 157,32 S187,48 209,27 S247,41 267,20 S300,31 321,12 S346,21 360,5 L360,85 L0,85 Z"
+                    fill="url(#chart-fill)"
+                  />
+                  <path
+                    d="M0,66 C22,62 25,46 48,53 S83,69 103,44 S140,50 157,32 S187,48 209,27 S247,41 267,20 S300,31 321,12 S346,21 360,5"
+                    fill="none"
+                    stroke="#d6b46a"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                  />
+                </svg>
+              </div>
+              <div class="overall-footer">
+                <span><i class="tiny-gold-dot"></i> Including Red Packets</span
+                ><span>RM 300.00</span>
+              </div>
+            </article>
+          </section>
+
+          <section class="content-grid">
+            <article class="panel activity-panel">
+              <div class="panel-header">
+                <div>
+                  <h2>Recent transactions</h2>
+                  <p>Your latest money movements</p>
+                </div>
+                <button class="text-button" id="view-all">
+                  View all <span>→</span>
+                </button>
+              </div>
+              <div class="transaction-list" id="transaction-list"></div>
+              <div class="empty-note" id="empty-note" hidden>
+                No transactions yet. Add one to see it here.
+              </div>
+            </article>
+
+            <article class="panel summary-panel">
+              <div class="panel-header">
+                <div>
+                  <h2>This month</h2>
+                  <p>Your money at a glance</p>
+                </div>
+                <span class="month-tag" id="month-tag">OCT 2026</span>
+              </div>
+              <div class="summary-stat">
+                <div class="stat-icon income-bg">↙</div>
+                <div class="stat-label">
+                  <span>Income</span
+                  ><strong id="monthly-income">RM 100.00</strong>
+                </div>
+                <span class="stat-arrow positive">↗</span>
+              </div>
+              <div class="summary-stat">
+                <div class="stat-icon expense-bg">↗</div>
+                <div class="stat-label">
+                  <span>Spending</span
+                  ><strong id="monthly-spending">RM 23.50</strong>
+                </div>
+                <span class="stat-arrow negative">↗</span>
+              </div>
+              <div class="summary-stat net-stat">
+                <div class="stat-icon net-bg">∑</div>
+                <div class="stat-label">
+                  <span>Net change</span
+                  ><strong id="net-change">+ RM 76.50</strong>
+                </div>
+                <span class="net-badge">Positive</span>
+              </div>
+              <div class="summary-footnote">
+                Transfers are excluded from income and spending.
+              </div>
+            </article>
+          </section>
+
+          <section class="bottom-grid">
+            <article class="panel quick-panel">
+              <div class="panel-header">
+                <div>
+                  <h2>Your accounts</h2>
+                  <p>Every account has a purpose</p>
+                </div>
+                <button class="text-button" data-go="Accounts">
+                  Manage <span>→</span>
+                </button>
+              </div>
+              <div class="account-cards">
+                <div class="account-card">
+                  <div class="account-card-top">
+                    <span class="account-symbol school-symbol">S</span
+                    ><span class="account-status">ACTIVE</span>
+                  </div>
+                  <span class="account-name">School Card</span
+                  ><strong id="quick-school">RM 680.00</strong
+                  ><span class="account-type">Everyday account</span>
+                </div>
+                <div class="account-card">
+                  <div class="account-card-top">
+                    <span class="account-symbol tng-symbol">T</span
+                    ><span class="account-status">ACTIVE</span>
+                  </div>
+                  <span class="account-name">Touch ’n Go</span
+                  ><strong id="quick-tng">RM 400.50</strong
+                  ><span class="account-type">Everyday account</span>
+                </div>
+                <div class="account-card">
+                  <div class="account-card-top">
+                    <span class="account-symbol cash-symbol">C</span
+                    ><span class="account-status">ACTIVE</span>
+                  </div>
+                  <span class="account-name">Cash</span
+                  ><strong id="quick-cash">RM 200.00</strong
+                  ><span class="account-type">Everyday account</span>
+                </div>
+                <div class="account-card packet-card">
+                  <div class="account-card-top">
+                    <span class="account-symbol packet-symbol">◇</span
+                    ><span class="account-status">SEPARATE</span>
+                  </div>
+                  <span class="account-name">Red Packets</span
+                  ><strong id="quick-packets">RM 300.00</strong
+                  ><span class="account-type">Yearly savings</span>
+                </div>
+              </div>
+            </article>
+          </section>
+
+          <footer class="footer">
+            <span
+              >🐷 <strong>Piggy Bank</strong>
+              <span class="footer-sep">·</span> Build better money habits.</span
+            >
+            <span
+              >Preview version <span class="footer-sep">·</span> Sample data
+              only</span
+            >
+          </footer>
+        </section>
+      </main>
+    </div>
+
+    <nav class="mobile-nav">
+      <button class="active" data-page="Home"><span>⌂</span>Home</button>
+      <button data-page="Transactions"><span>⇄</span>Activity</button>
+      <button data-page="Statistics"><span>▥</span>Stats</button>
+      <button data-page="Accounts"><span>▣</span>Accounts</button>
+      <button data-page="Bank"><span>▤</span>Bank</button>
+      <button data-page="Settings"><span>⚙</span>Settings</button>
+    </nav>
+
+    <button class="floating-add" id="floating-add" aria-label="Add transaction">
+      ＋
+    </button>
+
+    <div class="modal-backdrop" id="modal-backdrop" hidden>
+      <section
+        class="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-title"
+      >
+        <div class="modal-head">
+          <div>
+            <div class="eyebrow">PIGGY BANK</div>
+            <h2 id="modal-title">Add transaction</h2>
+          </div>
+          <button class="close-button" id="close-modal" aria-label="Close">
+            ×
+          </button>
+        </div>
+        <form id="transaction-form">
+          <label
+            >Transaction type
+            <select id="tx-type">
+              <option value="expense">Expense</option>
+              <option value="income">Income</option>
+              <option value="transfer">Transfer</option>
+            </select>
+          </label>
+          <label
+            >Amount (RM)
+            <input
+              id="tx-amount"
+              type="number"
+              min="0.01"
+              step="0.01"
+              placeholder="0.00"
+              required
+            />
+          </label>
+          <label
+            >Description
+            <input
+              id="tx-description"
+              type="text"
+              maxlength="100"
+              placeholder="e.g. Lunch"
+              required
+            />
+          </label>
+          <label
+            >Account
+            <select id="tx-account">
+              <option>School Card</option>
+              <option>TNG</option>
+              <option>Cash</option>
+              <option>Red Packets</option>
+            </select>
+          </label>
+          <label id="transfer-destination-wrap" hidden
+            >Transfer to
+            <select id="tx-transfer-to">
+              <option>TNG</option><option>School Card</option><option>Cash</option><option>Red Packets</option>
+            </select>
+          </label>
+          <label
+            >Category
+            <select id="tx-category">
+              <option>Food</option>
+              <option>Drink</option>
+              <option>Addon</option>
+              <option>Other</option>
+              <option>Allowance</option>
+              <option>Gift</option>
+              <option>Adjustment</option>
+            </select>
+          </label>
+          <label>Date<input id="tx-date" type="date" required /></label>
+          <div class="form-error" id="form-error" role="alert"></div>
+          <div class="form-actions">
+            <button type="button" class="secondary-button" id="cancel-modal">
+              Cancel
+            </button>
+            <button class="primary-button" type="submit">
+              Add transaction
+            </button>
+          </div>
+          <p class="demo-warning">
+            Local mode: data is stored in this browser, not a cloud database.
+          </p>
+        </form>
+      </section>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" crossorigin="anonymous"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
