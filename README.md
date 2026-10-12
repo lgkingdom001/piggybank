@@ -28,3 +28,9 @@ This package adds four fixed, reusable category photos and OCR category detectio
 - Existing transactions are not deleted or rewritten by this code. Their current saved categories remain as-is until you edit them. New OCR rows use the four-way classifier.
 - Category detection uses keywords, not AI, so ambiguous descriptions can be misclassified. OCR review lets you change the category before importing.
 - The category images are static local assets; no API key or extra recurring cost is needed.
+
+
+## PWA / Install as an app
+This version includes `manifest.json`, `sw.js`, and three Piggy Bank icons. Upload all files and folders to the same repository location as `index.html`, keeping paths intact. Commit and push to GitHub Pages, wait for deployment, then open the HTTPS website and install it from the browser menu (Chrome/Edge: install icon or menu → Install app; Android Chrome: menu → Add to Home screen; iPhone/iPad Safari: Share → Add to Home Screen).
+
+The service worker caches the app shell and four category images for offline opening after the first successful online load. Google Fonts and the Tesseract OCR library are external resources and may not be available offline. Existing finance data remains in the browser's localStorage; this is not cloud sync and does not move data between devices. For updated service worker files, refresh the website online once after deployment.
