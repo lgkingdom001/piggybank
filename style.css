@@ -1603,8 +1603,9 @@ h1 span {
 
   .mobile-nav {
     position: fixed;
-    display: grid;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    display: flex;
+    overflow-x: auto;
+    overflow-y: hidden;
     inset: auto 0 0;
     z-index: 10;
     height: 65px;
@@ -1612,9 +1613,16 @@ h1 span {
     background: #101113f5;
     border-top: 1px solid #292a2d;
     backdrop-filter: blur(18px);
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .mobile-nav::-webkit-scrollbar {
+    display: none;
   }
 
   .mobile-nav button {
+    flex: 1 0 58px;
     border: 0;
     background: transparent;
     color: #7f8188;
@@ -1624,7 +1632,8 @@ h1 span {
     justify-content: center;
     gap: 4px;
     font-size: 8px;
-    min-width: 0;
+    min-width: 58px;
+    white-space: nowrap;
   }
 
   .mobile-nav button span {
