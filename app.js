@@ -21,6 +21,239 @@ let schoolCardLastReset = "";
 const STORAGE_KEY = "piggy-bank-bank-rule-b-v1";
 const MIGRATION_KEY = "piggy-bank-starting-data-v3";
 
+// Supabase cloud sync. The publishable key is designed for browser use;
+// table access is restricted by Supabase Auth + Row Level Security.
+const SUPABASE_URL = "https://wbqpruftafaetbefgslp.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_dhlmVOm4qEFsoz_a8GSMpw_fv7Lj3cg";
+let supabaseClient = null;
+let cloudUser = null;
+let cloudDirty = false;
+let applyingCloudSnapshot = false;
+let cloudSaveTimer = null;
+let cloudPollTimer = null;
+let lastCloudUpdatedAt = "";
+let cloudConflictAlerted = false;
+
+function cloudStatus(message, isError = false) {
+  const el = document.getElementById("cloud-sync-status");
+  if (el) {
+    el.textContent = message;
+    el.style.color = isError ? "#ff8b8b" : "";
+  }
+}
+
+function cloudClient() {
+  if (supabaseClient) return supabaseClient;
+  if (!window.supabase?.createClient) throw new Error("Supabase library did not load. Reload while online.");
+  supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+  });
+  return supabaseClient;
+}
+
+function scheduleCloudSave() {
+  if (!cloudUser || applyingCloudSnapshot) return;
+  cloudDirty = true;
+  if (cloudSaveTimer) clearTimeout(cloudSaveTimer);
+  cloudSaveTimer = setTimeout(() => pushCloudSnapshot(), 900);
+  cloudStatus("Signed in · local changes waiting to sync…");
+}
+
+async function pushCloudSnapshot() {
+  if (!cloudUser || applyingCloudSnapshot || !cloudDirty) return;
+  const snapshot = currentStateSnapshot();
+  cloudStatus("Syncing to cloud…");
+  try {
+    const client = cloudClient();
+    const { error } = await client.from("piggy_bank_data").upsert({
+      user_id: cloudUser.id,
+      data: snapshot,
+      updated_at: new Date().toISOString()
+    }, { onConflict: "user_id" });
+    if (error) throw error;
+    cloudDirty = false;
+    cloudConflictAlerted = false;
+    const { data, error: readError } = await client.from("piggy_bank_data")
+      .select("updated_at").eq("user_id", cloudUser.id).maybeSingle();
+    if (!readError && data?.updated_at) lastCloudUpdatedAt = data.updated_at;
+    cloudStatus("Synced · " + new Date().toLocaleTimeString());
+  } catch (error) {
+    console.error("Piggy Bank cloud sync failed:", error);
+    cloudStatus("Sync failed: " + (error.message || "check Supabase setup"), true);
+  }
+}
+
+async function pullCloudSnapshot({ force = false } = {}) {
+  if (!cloudUser) return;
+  try {
+    const client = cloudClient();
+    const { data, error } = await client.from("piggy_bank_data")
+      .select("data,updated_at").eq("user_id", cloudUser.id).maybeSingle();
+    if (error) throw error;
+    if (!data) {
+      if (!cloudDirty) {
+        cloudDirty = true;
+        await pushCloudSnapshot();
+      }
+      return;
+    }
+    if (!force && lastCloudUpdatedAt && data.updated_at === lastCloudUpdatedAt) return;
+    if (!force && cloudDirty) {
+      if (!cloudConflictAlerted) {
+        cloudConflictAlerted = true;
+        cloudStatus("Another device has newer data. Your local edits are not overwritten; use Sync choices.", true);
+      }
+      return;
+    }
+    applyingCloudSnapshot = true;
+    try {
+      applyStateSnapshot(data.data);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(currentStateSnapshot()));
+      lastCloudUpdatedAt = data.updated_at || "";
+      cloudDirty = false;
+      renderAll();
+      const active = document.querySelector("[data-page].active");
+      if (active?.dataset.page) showPage(active.dataset.page);
+      cloudStatus("Synced from cloud · " + new Date().toLocaleTimeString());
+    } finally {
+      applyingCloudSnapshot = false;
+    }
+  } catch (error) {
+    console.error("Piggy Bank cloud pull failed:", error);
+    cloudStatus("Cloud error: " + (error.message || "check table and RLS"), true);
+  }
+}
+
+async function refreshCloudSession({ promptExisting = true } = {}) {
+  try {
+    const client = cloudClient();
+    const { data, error } = await client.auth.getSession();
+    if (error) throw error;
+    cloudUser = data.session?.user || null;
+    updateCloudAuthUI();
+    if (cloudUser) {
+      const { data: row, error: rowError } = await client.from("piggy_bank_data")
+        .select("data,updated_at").eq("user_id", cloudUser.id).maybeSingle();
+      if (rowError) throw rowError;
+      if (!row) {
+        // First signed-in device initializes the cloud snapshot from its local data.
+        cloudDirty = true;
+        await pushCloudSnapshot();
+      } else {
+        const useCloud = promptExisting ? confirm(
+          "Piggy Bank cloud data already exists for this account.\n\nOK = download cloud data to THIS device (replace this device's local data).\nCancel = keep this device's local data and upload it to the cloud (replace the cloud copy).\n\nExport backups from both devices before choosing."
+        ) : true;
+        if (useCloud) {
+          applyingCloudSnapshot = true;
+          try {
+            applyStateSnapshot(row.data);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(currentStateSnapshot()));
+            lastCloudUpdatedAt = row.updated_at || "";
+            cloudDirty = false;
+            renderAll();
+            showPage("Settings");
+          } finally { applyingCloudSnapshot = false; }
+        } else {
+          lastCloudUpdatedAt = row.updated_at || "";
+          cloudDirty = true;
+          await pushCloudSnapshot();
+        }
+      }
+      if (cloudPollTimer) clearInterval(cloudPollTimer);
+      cloudPollTimer = setInterval(() => pullCloudSnapshot(), 15000);
+      updateCloudAuthUI();
+    } else {
+      if (cloudPollTimer) clearInterval(cloudPollTimer);
+      cloudStatus("Not signed in · data stays on this device");
+    }
+  } catch (error) {
+    console.error("Piggy Bank cloud auth error:", error);
+    cloudStatus("Cloud setup error: " + (error.message || "check SQL and settings"), true);
+  }
+}
+
+function updateCloudAuthUI() {
+  const auth = document.getElementById("cloud-auth-form");
+  const signOut = document.getElementById("cloud-sign-out");
+  const email = document.getElementById("cloud-email");
+  if (auth) auth.style.display = cloudUser ? "none" : "grid";
+  if (signOut) signOut.style.display = cloudUser ? "inline-flex" : "none";
+  if (email) email.textContent = cloudUser ? "Signed in as " + cloudUser.email : "Sign in to sync across devices";
+}
+
+async function wireCloudSyncUI() {
+  const form = document.getElementById("cloud-auth-form");
+  if (form && !form.dataset.wired) {
+    form.dataset.wired = "1";
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const email = document.getElementById("cloud-email-input").value.trim();
+      const password = document.getElementById("cloud-password-input").value;
+      const mode = document.getElementById("cloud-auth-mode").value;
+      const submit = document.getElementById("cloud-auth-submit");
+      submit.disabled = true;
+      try {
+        const client = cloudClient();
+        const result = mode === "signup"
+          ? await client.auth.signUp({ email, password })
+          : await client.auth.signInWithPassword({ email, password });
+        if (result.error) throw result.error;
+        if (mode === "signup" && !result.data.session) {
+          cloudStatus("Account created. Check your email to confirm, then sign in.");
+        } else {
+          await refreshCloudSession();
+        }
+      } catch (error) {
+        cloudStatus(error.message || "Sign-in failed", true);
+      } finally { submit.disabled = false; }
+    });
+  }
+  const modeSelect = document.getElementById("cloud-auth-mode");
+  if (modeSelect && !modeSelect.dataset.wired) {
+    modeSelect.dataset.wired = "1";
+    modeSelect.addEventListener("change", () => {
+      const btn = document.getElementById("cloud-auth-submit");
+      if (btn) btn.textContent = modeSelect.value === "signup" ? "Create account" : "Sign in";
+    });
+  }
+  const signOut = document.getElementById("cloud-sign-out");
+  if (signOut && !signOut.dataset.wired) {
+    signOut.dataset.wired = "1";
+    signOut.addEventListener("click", async () => {
+      if (cloudDirty) await pushCloudSnapshot();
+      const { error } = await cloudClient().auth.signOut();
+      if (error) return cloudStatus(error.message, true);
+      cloudUser = null;
+      if (cloudPollTimer) clearInterval(cloudPollTimer);
+      updateCloudAuthUI();
+      cloudStatus("Signed out · this device's data is kept locally");
+    });
+  }
+  const pull = document.getElementById("cloud-download-now");
+  if (pull && !pull.dataset.wired) {
+    pull.dataset.wired = "1";
+    pull.addEventListener("click", async () => {
+      if (!cloudUser) return;
+      if (!confirm("Download the latest cloud snapshot and replace this device's local data? Export a backup first.")) return;
+      cloudDirty = false;
+      await pullCloudSnapshot({ force: true });
+    });
+  }
+  const push = document.getElementById("cloud-upload-now");
+  if (push && !push.dataset.wired) {
+    push.dataset.wired = "1";
+    push.addEventListener("click", async () => {
+      if (!cloudUser) return;
+      if (!confirm("Upload this device's full data and replace the cloud snapshot? This may replace data from another device. Export backups first.")) return;
+      cloudDirty = true;
+      await pushCloudSnapshot();
+    });
+  }
+  updateCloudAuthUI();
+  if (cloudUser) cloudStatus("Signed in · cloud sync active");
+}
+
+
 // ==================================================
 // FIXED CATEGORY IMAGES — local files, no AI/API/network calls
 // Keep these files in the assets/ folder next to app.js.
@@ -68,22 +301,37 @@ function categoryThumbnail(category, description = "") {
   return `<img src="${categoryImage(normalized)}" alt="${escapeHTML(normalized)}" loading="lazy" style="width:38px;height:38px;object-fit:cover;border-radius:9px;flex:0 0 38px">`;
 }
 
+function currentStateSnapshot() {
+  return {
+    accounts: { ...accounts },
+    transactions: structuredClone(transactions),
+    nextId,
+    bankDeposits: structuredClone(bankDeposits),
+    bankBalance,
+    schoolCardLastReset,
+  };
+}
+
+function applyStateSnapshot(saved) {
+  if (!saved || !saved.accounts || !Array.isArray(saved.transactions)) {
+    throw new Error("Cloud data format is not a valid Piggy Bank snapshot.");
+  }
+  Object.keys(accounts).forEach((key) => delete accounts[key]);
+  Object.assign(accounts, saved.accounts);
+  transactions = saved.transactions;
+  nextId = Number(saved.nextId) || 1;
+  bankDeposits = Array.isArray(saved.bankDeposits) ? saved.bankDeposits : [];
+  bankBalance = Number(saved.bankBalance) || 0;
+  schoolCardLastReset = saved.schoolCardLastReset || "";
+}
+
 function saveState() {
   try {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({
-        accounts,
-        transactions,
-        nextId,
-        bankDeposits,
-        bankBalance,
-        schoolCardLastReset,
-      }),
-    );
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(currentStateSnapshot()));
   } catch (error) {
     console.warn("Unable to save Piggy Bank data.", error);
   }
+  if (typeof scheduleCloudSave === "function") scheduleCloudSave();
 }
 
 function loadState() {
@@ -593,9 +841,26 @@ function renderMonthlyReportPage() {
 function renderSettingsPage() {
   return panel(
     "Settings & data",
-    "This version stores data in this browser.",
+    "Cloud sync across your phone and PC.",
     `
-    <p class="muted-note">Export a backup regularly. Clearing browser data may remove your saved records.</p>
+    <section class="cloud-sync-card" style="border:1px solid var(--border-color,#333);border-radius:16px;padding:16px;margin-bottom:18px">
+      <h3 style="margin-top:0">☁️ Cloud sync</h3>
+      <p id="cloud-email" class="muted-note">Sign in to sync across devices</p>
+      <p id="cloud-sync-status" class="muted-note" role="status">Checking Supabase…</p>
+      <form id="cloud-auth-form" style="display:grid;gap:10px;max-width:440px">
+        <label>Email<input id="cloud-email-input" class="field-input" type="email" autocomplete="username" required placeholder="you@example.com"></label>
+        <label>Password<input id="cloud-password-input" class="field-input" type="password" autocomplete="current-password" minlength="6" required placeholder="At least 6 characters"></label>
+        <label>Action<select id="cloud-auth-mode" class="field-input"><option value="signin">Sign in</option><option value="signup">Create new account</option></select></label>
+        <button class="primary-button" id="cloud-auth-submit" type="submit">Sign in</button>
+      </form>
+      <div class="settings-actions" style="margin-top:12px">
+        <button class="secondary-button" id="cloud-download-now" type="button">Download cloud data</button>
+        <button class="secondary-button" id="cloud-upload-now" type="button">Upload this device</button>
+        <button class="secondary-button" id="cloud-sign-out" type="button" style="display:none">Sign out</button>
+      </div>
+      <p class="muted-note">First sign-in on a device with no cloud record uploads this device's data. If cloud data already exists, you'll be asked whether to download it or upload this device's data. Back up both devices first.</p>
+    </section>
+    <p class="muted-note">Export a backup regularly. Clearing browser data may remove records saved only on this device.</p>
     <div class="settings-actions">
       <button class="primary-button" id="export-json">Export JSON backup</button>
       <button class="secondary-button" id="export-csv">Export transactions CSV</button>
@@ -733,6 +998,7 @@ function wireFunctionalPage(page) {
     .forEach((el) => el.addEventListener("input", applyFilters));
 
   wireTransactionActions();
+  if (page === "Settings") wireCloudSyncUI();
 
   const importButton = $("import-school-screenshot");
   const screenshotInput = $("school-screenshot");
@@ -1286,5 +1552,9 @@ loadState();
 runSchoolCardResetIfDue();
 renderAll();
 showPage("Home");
+if (window.supabase?.createClient) {
+  // Restore an existing login session; cloud conflicts are handled explicitly.
+  refreshCloudSession({ promptExisting: false });
+}
 
 console.log("Piggy Bank initialized.");
